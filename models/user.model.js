@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -15,10 +16,11 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     image: {
-      type: String,
+      type: String,  // URL only, no public_id needed
     },
   },
   { timestamps: true }
 );
+
 const User = mongoose.model("User", userSchema);
 export default User;

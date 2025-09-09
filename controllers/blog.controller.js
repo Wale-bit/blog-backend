@@ -1,5 +1,5 @@
 import Blog from "../models/blog.model.js";
-import fs from "fs";
+import { uploadToCloudinary, deleteFromCloudinary } from "../middlewares/multer.js";  // Ensure these are imported
 
 export const allBlogs = async (req, res) => {
   try {
@@ -13,12 +13,12 @@ export const allBlogs = async (req, res) => {
 export const createBlog = async (req, res) => {
   try {
     const { title, category, description } = req.body;
-    const image_filename = `${req.file.filename}`;
+    const result = await uploadToCloudinary(req.file.buffer, 'blogs');  // Upload and get result
     const blog = await Blog.create({
       title,
       category,
       description,
-      image: image_filename,
+      image: { url: result.secure_url, public_id: result.public_id },  // Store both
       author: {
         id: req.user._id,
         name: req.user.name,
@@ -35,7 +35,6 @@ export const createBlog = async (req, res) => {
 
 export const deleteBlog = async (req, res) => {
   const blog = await Blog.findById(req.params.id);
-  fs.unlink(`uploads/${blog.image}`, () => {});
   if (!blog) {
     return res.status(404).json({ message: "blog not found", success: false });
   }
@@ -44,10 +43,11 @@ export const deleteBlog = async (req, res) => {
       .status(403)
       .json({ message: "Not authorized to delete this blog", success: false });
   }
+  if (blog.image?.public_id) {
+    await deleteFromCloudinary(blog.image.public_id);  // Delete from Cloudinary
+  }
   await blog.deleteOne();
-  return res
-    .status(404)
-    .json({ message: "blog deleted successfully", success: true });
+  return res.status(200).json({ message: "blog deleted successfully", success: true });  // Fixed status
 };
 
 export const singleBlog = async (req, res) => {
@@ -55,7 +55,7 @@ export const singleBlog = async (req, res) => {
     const blog = await Blog.findById(req.params.id);
     return res
       .status(200)
-      .json({ message: "blog  found", success: true, blog });
+      .json({ message: "blog found", success: true, blog });
   } catch (error) {
     return res
       .status(500)

@@ -1,9 +1,10 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { uploadToCloudinary } from "../middlewares/multer.js";  // Ensure this import is added
+
 export const register = async (req, res) => {
   try {
-    let image_filename = `${req.file.filename}`;
     const { name, email, password } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -12,11 +13,12 @@ export const register = async (req, res) => {
         .json({ message: "User already exists", success: false });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+    const image_url = await uploadToCloudinary(req.file.buffer, 'users');  // Add this line
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      image: image_filename,
+      image: image_url  // Store the Cloudinary URL
     });
     res
       .status(201)
